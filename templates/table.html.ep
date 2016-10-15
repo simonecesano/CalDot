@@ -1,0 +1,49 @@
+% layout 'default';
+% title 'Welcome';
+<script>
+    $(function(){
+	var templates = {}
+	$(("[type='text/x-handlebars-template']" )).each(function(){
+	    var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
+	    templates[id] = Handlebars.compile($(this).html());
+	});
+	var data = JSON.parse(localStorage.getItem('calendar'));
+	console.log(data[3]);
+	$('#tasks').html(templates.people_table({
+	    tasks: data,
+	    fields: ["task", "start", "finish", "owner", "participants"]
+	}))
+	$('.start, .finish').each(function(i, e){
+	    if ($(e).html() && $(e).html().match(/Invalid Date/i)) { $(e).html('') }
+	    if ($(e).html()) {
+		var m = moment($(e).html())
+		$(e).html(m.format('DD-MMM-YY'))
+	    }
+	})
+    })
+</script>
+<style>
+  .form-group { padding-right: 1em; margin-right: 1em;  border-right: thin solid lightgrey  }
+</style>
+<div id="tasks">
+</div>  
+<script id="people_table-template" type="text/x-handlebars-template">	
+  <table class="table table-striped">
+    <tbody>
+      <tr>
+	<td></td>
+	{{#each fields as |field| }}
+	<th>{{ field }}</th>
+	{{/each}}
+      </tr>
+      {{#each tasks as |task| }}
+      <tr>
+	<td>{{ @index }}</td>
+	{{#each ../fields as |field| }}
+	<td class="{{ field }}">{{ lookup task field }}</td>
+	{{/each}}
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</script>
