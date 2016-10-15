@@ -5,10 +5,11 @@ use DateTime;
 
 # Documentation browser under "/perldoc"
 plugin 'PODRenderer';
+# push @{app->static->paths}, app->home->rel_dir('public');
 
 get '/' => sub {
   my $c = shift;
-  $c->render(template => 'index');
+  $c->render(template => 'load');
 };
 
 post '/' => sub {
@@ -27,7 +28,12 @@ get '/holidays' => [ format => [qw/json/]] => sub {
 
 get '/holidays';
 
-get '/show';
+get '/load';
+
+get '/chart';
+
+get '/table';
+
 
 app->start;
 __DATA__
