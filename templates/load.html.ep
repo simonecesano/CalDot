@@ -1,0 +1,117 @@
+% layout 'default';
+% title 'Welcome';
+%= javascript 'https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.2.0/dropzone.js'
+%= stylesheet 'https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.2.0/dropzone.css'
+%= javascript 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.8.0/xlsx.full.min.js'
+<h4>Process a calendar</h4>
+<form>
+  <div class="form-group">
+    <textarea id="calendar" class="form-control" rows="8"></textarea><br />
+    <div class="form-group">
+      <label for="date_format">Date format</label>
+      <input type="text" class="form-control" id="date_format" placeholder="DD-MMM-YY">
+    </div>  
+    <input class="btn btn-default" type="button" id="check" value="Check data">
+  </div>
+</form>
+<script>
+    $(function(){
+	var calendar;
+	var templates = {};
+	$(("[type='text/x-handlebars-template']" )).each(function(){
+	    var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
+	    templates[id] = Handlebars.compile($(this).html());
+	});
+	$('#start_date').datepicker({
+	    format: "dd/mm/yyyy"
+	})
+	$('#check').click(function(){
+	    calendar = _.map($('#calendar').val().split(/\n/), function(e){
+		return e.split(/\t/);
+	    });
+	    var calendar_summary = {};
+	    calendar_summary.rows = calendar.length;
+	    calendar_summary.headers = calendar[0];
+	    $('#calendar_data_modal').html(templates.calendar_data(calendar_summary))
+	    $('#calendar_data_modal').modal()
+	});
+	$('#calendar_data_modal').on('hidden.bs.modal', function (e) {
+	    // ---------------------------------------------
+	    // convert the calendar to an array of hashes
+	    // ---------------------------------------------
+	    var mapping = [];
+	    $('.field_selector').each(function(i, e){
+		if ($(e).val()) {
+		    mapping.push([$(e).data('column'), $(e).val()]);
+		}
+	    });
+	    calendar = _.map(calendar, function(e, i){
+		var task = {}; var row = e
+		_.each(mapping, function(e, i){
+		    task[e[1]] = row[e[0]];
+		});
+		return task;
+	    });
+	    var date_format = $('#date_format').val();
+	    _.each(calendar, function(e, i){
+		e.start = moment(e.start, date_format).format();
+		e.finish = moment(e.finish, date_format).format();
+	    });
+	    localStorage.setItem('calendar', JSON.stringify(calendar));
+	});
+	$('#calendar_data_modal').on('shown.bs.modal', function (e) {
+	    $('.field_selector').each(function(i, e){
+		var field = $(e).parent().siblings('.field').text();
+	    	$(e).children().each(function(i, e){
+		    var re = new RegExp($(e).val(), 'i');
+		    if (field.match(re)) {
+			$(e).parent().val($(e).val());
+		    }
+	    	});
+	    });
+	});
+    })
+</script>
+<div id="calendar_data_modal" class="modal fade" tabindex="-1" role="dialog"></div>
+<script id="calendar_data-template" type="text/x-handlebars-template">	
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+	<h4 class="modal-title">Calendar data</h4>
+      </div>
+      <div class="modal-body">
+	<ul>
+	  <li>rows: {{ rows }}</li>
+	  <li>headers:
+	    <table class="table">
+	      {{#each headers}}
+	      <tr>
+		<td>{{ @index }}</td>
+		<td class="field">{{ this }}</td>
+		<td>
+		  <select class="field_selector" data-column="{{ @index }}" name="field">
+		    <option disabled selected value> -- assign a field -- </option>
+		    <option value="season">Season</option>
+		    <option value="task">Task</option>
+		    <option value="start">Start</option>
+		    <option value="finish">Finish</option>
+		    <option value="owner">Owner</option>
+		    <option value="participants">Participants</option>
+		    <option value="location">Location</option> 
+		  </select>
+		</td>
+	      </tr>
+	      {{/each}}
+	    </table>
+	  </li>
+	</ul>
+      </div>
+      <div class="modal-footer">
+        <button id="fields_modal_close" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</script>
+
+
