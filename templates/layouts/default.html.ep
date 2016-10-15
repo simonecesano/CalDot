@@ -19,6 +19,7 @@
     %= stylesheet 'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.6.4/css/bootstrap-datepicker.css'
     %= javascript 'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.6.4/js/bootstrap-datepicker.js'
     %= javascript 'https://fastcdn.org/FileSaver.js/1.1.20151003/FileSaver.min.js'
+    %= javascript 'https://cdn.rawgit.com/riccardoscalco/textures/master/textures.min.js'
     <style>
       * { font-family: Lato }
       body { padding-top: 64px; }
