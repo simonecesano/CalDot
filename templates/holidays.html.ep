@@ -1,0 +1,123 @@
+% layout 'default';
+% title 'Welcome';
+<script>
+    $(function(){
+	$('#save').click(function(){
+	    var html = d3.select("#d3")
+		.attr("version", 1.1)
+		.attr("xmlns", "http://www.w3.org/2000/svg")
+		.node().parentNode.innerHTML;
+	    
+	    var blob = new Blob([html], {type: "image/svg+xml"});
+	    saveAs(blob, "myProfile.svg");
+	})
+
+	
+	var width = $('#chart').width();
+	var x_scale = d3.scaleLinear()
+	    .domain([moment('2016-01-01T00:00:00').unix(), moment('2017-01-01T00:00:00').unix()])
+	    .range([20, width-20]);
+
+	var months = _.map([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], function(e){
+	    var start = moment([2016, e, 1]);
+	    var end   = start.clone().endOf('month');
+	    return { start:    start,
+		     end:      end,
+		     duration: Math.round(moment.duration(end.diff(start)).asSeconds() ), 
+		     name:     start.format('MMM') } 
+	})
+	console.log(months);
+	
+	var svg = d3.select("#chart").append("svg")
+	    .attr("width", width)
+	    .attr("height", 400)
+	    .attr('id', 'd3')
+	    .style("background-color", "#eeeeee");
+
+	svg.selectAll("rect")
+	    .data(months)                        
+	    .enter()                           
+	    .append("rect")
+	    .attr("x", function(d){ return x_scale(d.start.unix()) })
+            .attr("y", 10)
+	    .attr("width", function(d){ return x_scale(d.end.unix()) - x_scale(d.start.unix()) })
+            .attr("height", 50)
+	    .attr("fill", function(d){ return '#bbbbbb' })
+	    .attr("stroke", function(d){ return "#eeeeee" })
+	    .attr("stroke-width", 3)
+	
+	svg.selectAll("text")
+	    .data(months)                        
+	    .enter()                           
+	    .append('text')
+            .attr('class', "month")
+	    .attr('text-anchor', "middle")
+	    .attr("x", function(d){ return x_scale(d.start.unix()) + (x_scale(d.end.unix()) - x_scale(d.start.unix())) / 2  })
+            .attr("y", 40)
+	    .attr("style", "color:white")
+	    .text( function (d) { return d.name })
+
+	;	
+
+	
+	$.get('/holidays.json', function(data){
+	    data = _.sortBy(data, function(e){ return e.date });
+	    
+	    svg.selectAll(".line")
+		.data([[]])                        
+		.enter()                           
+		.append("line")
+		.attr("x1", 10)
+		.attr("x2", width - 10)
+	        .attr("y1", 200)
+	    	.attr("y2", 200)
+	    	.attr("stroke-width", 1)
+	    	.attr("stroke", '#999999');
+	    
+	    svg.selectAll(".line")                  
+		.data(data)                        
+		.enter()                           
+		.append("line")
+            	.attr('class', "line")
+		.attr("x1", function(d) { return x_scale(moment(d.date).unix()) })
+		.attr("x2", function(d) { return x_scale(moment(d.date).unix()) })
+	        .attr("y1", function(d, i) { return i++ % 2 ? 240 : 280 ; })
+	    	.attr("y2", function(d) { return 200 ; })
+	    	.attr("stroke-width", 1)
+	    	.attr("stroke", 'black');
+
+	    svg.selectAll("circle")                  // create virtual circle template
+		.data(data)                            // bind data
+		.enter()                                 // for each row in data...
+		.append("circle")                      // bind circle & data row such that... 
+		.attr("cx", function(d) { return x_scale(moment(d.date).unix()) })  
+		.attr("cy", function(d) { return 200 })
+		.attr("r",  function(d) { return 16 })
+		.attr("fill",function(d){ return 'red' })
+	    ;
+	    svg.selectAll(".name")                  
+		.data(data)                        
+		.enter()                           
+		.append("text")                    
+		.attr('text-anchor', "middle")
+	    	.attr('class', "name")
+		.attr("x", function(d, j) { return x_scale(moment(d.date).unix()) })
+	        .attr("y", function(d, i) { return i++ % 2 ? 250 : 290 ; })
+		.text( function (d) { return d.name })
+	    ;
+	    i = 0;
+	    svg.selectAll(".date")                  
+		.data(data)                        
+		.enter()                           
+		.append("text")
+            	.attr('class', "date")
+		.attr('text-anchor', "middle")
+		.attr("x", function(d) { return x_scale(moment(d.date).unix()) })
+	        .attr("y", function(d, i) { return i++ % 2 ? 270 : 310 ; })
+		.text( function (d) { return moment(d.date).format('D MMM') })
+	    ;
+	})
+    })
+</script>
+<div id="chart">
+</div>

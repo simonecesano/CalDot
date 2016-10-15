@@ -1,0 +1,253 @@
+% layout 'default';
+% title 'Welcome';
+<script>
+  $(function(){
+      var templates = {};
+      
+      $(("[type='text/x-handlebars-template']" )).each(function(){
+	  var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
+	  templates[id] = Handlebars.compile($(this).html());
+      });
+      $('#save').click(function(){
+	  var html = d3.select("#d3")
+	      .attr("version", 1.1)
+	      .attr("xmlns", "http://www.w3.org/2000/svg")
+	      .node().parentNode.innerHTML;
+	  
+	  var blob = new Blob([html], {type: "image/svg+xml"});
+	  saveAs(blob, "myProfile.svg");
+      })
+      
+      // ------------------------------------------------------------------------------
+      // calendar creation starts here
+      // ------------------------------------------------------------------------------
+      
+      var time_chunk = {
+	  'YYYY' : 'year',
+	  'MMM':   'month',
+	  'WW':    'week',
+	  'DD':    'day',
+	  'HH':    'hour',
+      };
+      
+      var data = JSON.parse(localStorage.getItem('calendar'));
+      _.each(data, function(e, i){
+	  e.date = e.start;
+	  e.name = e.task
+      });
+      data = _.filter(data, function(e){
+	  return !(e.date.match(/invalid/i))
+      })
+      data = _.sortBy(data, function(e){ return moment(e.date).unix() });
+      
+      var people = _.flatten(_.map(data, function(e, i){
+	  
+	  var p = e.owner.split(/;\s*|,\s*/);
+	  if (e.participants) { p.push(e.participants.split(/;\s*|,\s*/)) }
+	  return _.flatten(p);
+      }));
+      people = _.sortBy(people);
+      $('#people').html(templates.people_select({ people: _.uniq(people) }))
+      
+      var min_date = _.first(data).date
+      var max_date = _.last(data).date
+      
+      var scales = { min: $('#min_scale').val(), maj: $('#maj_scale').val() }
+      
+      var start_scale = moment(min_date).clone().startOf(time_chunk[scales.min]);
+      var end_scale = moment(max_date).clone().endOf(time_chunk[scales.min]);
+      
+      var chunk_count = Math.floor(moment.duration(end_scale.diff(start_scale)).as(time_chunk[scales.min]))
+
+	var width = $('#chart').width();
+	var x_scale = d3.scaleLinear()
+	    .domain([start_scale.unix(), end_scale.unix()])
+	    .range([20, width-20]);
+
+	var dot_radius = 10;
+
+	var chunks = {};
+	_.each(['min', 'maj'], function(scale_type) {
+	    var last_chunk = start_scale.clone();
+	    chunks[scale_type] = [];
+	    while (last_chunk.unix() < end_scale.unix()) {
+		var start = last_chunk.clone()
+		var end   = start.clone().endOf(time_chunk[scales[scale_type]]);
+		if (end.unix() > end_scale.unix()) { end = end_scale.clone() }
+		chunks[scale_type].push({
+		    start:    start,
+		    end:      end,
+		    start_f: start.format(),
+		    end_f: end.format(),
+		    duration: Math.round(moment.duration(end.diff(start)).asSeconds() ), 
+		    name:     start.format(scales[scale_type]),
+		    format: scales[scale_type]
+		});
+		last_chunk = end.clone().add(1, 'seconds');
+	    };
+	});
+	
+	// console.log(chunks);
+	    
+	var svg = d3.select("#chart").append("svg")
+	    .attr("width", width)
+	    .attr("height", 400)
+	    .attr('id', 'd3')
+	    .style("background-color", "#eeeeee");
+
+	var chunk_y = 10; var chunk_height = 40;
+	
+	_.each(['maj', 'min'], function(scale_type) {
+	    var chunk_class = scale_type + '_chunk';
+
+	    svg.selectAll('rect.' + chunk_class)
+		.data(chunks[scale_type])                        
+		.enter()                           
+		.append("rect")
+		.attr("x", function(d){ return x_scale(d.start.unix()) })
+		.attr("y", chunk_y)
+		.attr("width", function(d){ return x_scale(d.end.unix()) - x_scale(d.start.unix()) })
+		.attr("height", chunk_height)
+		.attr("fill", function(d){ return '#bbbbbb' })
+		.attr("stroke", function(d){ return "#eeeeee" })
+		.attr("class", chunk_class)
+		.attr("stroke-width", 3)
+	    
+	    svg.selectAll("text." + chunk_class)
+		.data(chunks[scale_type])                        
+		.enter()                           
+		.append('text')
+		.attr('class', "month")
+		.attr('text-anchor', "middle")
+		.attr("x", function(d){ return x_scale(d.start.unix()) + (x_scale(d.end.unix()) - x_scale(d.start.unix())) / 2  })
+		.attr("y", chunk_y + 25)
+		.attr("style", "color:white")
+		.attr("class", chunk_class)
+		.text( function (d) { return d.name })
+	    ;
+	    chunk_y = chunk_y + chunk_height; 
+	});
+	
+	
+	svg.selectAll(".line")
+	    .data([[]])                        
+	    .enter()                           
+	    .append("line")
+	    .attr("x1", 10)
+	    .attr("x2", width - 10)
+	    .attr("y1", 200)
+	    .attr("y2", 200)
+	    .attr("stroke-width", 1)
+	    .attr("stroke", '#999999');
+	
+	svg.selectAll(".line")                  
+	    .data(data)                        
+	    .enter()                           
+	    .append("line")
+            .attr('class', "line")
+	    .attr("x1", function(d) { return x_scale(moment(d.date).unix()) })
+	    .attr("x2", function(d) { return x_scale(moment(d.date).unix()) })
+	    .attr("y1", function(d, i) { return i++ % 2 ? 240 : 280 ; })
+	    .attr("y2", function(d) { return 200 ; })
+	    .attr("stroke-width", 1)
+	    .attr("stroke", 'black');
+	
+	svg.selectAll("circle")                  // create virtual circle template
+	    .data(data)                            // bind data
+	    .enter()                                 // for each row in data...
+	    .append("circle")                      // bind circle & data row such that... 
+	    .attr("cx", function(d) { return x_scale(moment(d.date).unix()) })  
+	    .attr("cy", function(d) { return 200 })
+	    .attr("r",  function(d) { return dot_radius })
+	    .attr("fill",function(d){ return 'red' })
+	;
+	svg.selectAll(".name")                  
+	    .data(data)                        
+	    .enter()                           
+	    .append("text")                    
+	    .attr('text-anchor', "middle")
+	    .attr('class', "name")
+	    .attr("x", function(d, j) { return x_scale(moment(d.date).unix()) })
+	    .attr("y", function(d, i) { return i++ % 2 ? 250 : 290 ; })
+	    .text( function (d) { return d.name })
+	;
+	i = 0;
+	svg.selectAll(".date")                  
+	    .data(data)                        
+	    .enter()                           
+	    .append("text")
+            .attr('class', "date")
+	    .attr('text-anchor', "middle")
+	    .attr("x", function(d) { return x_scale(moment(d.date).unix()) })
+	    .attr("y", function(d, i) { return i++ % 2 ? 270 : 310 ; })
+	    .text( function (d) { return moment(d.date).format('D MMM') })
+	;
+    })
+</script>
+<div id="chart">
+</div>
+<style>
+  .form-group { padding-right: 1em; margin-right: 1em;  border-right: thin solid lightgrey  }
+</style>
+<div id="form" class="form-inline">
+  <p /><hr /><p />
+    
+  <div class="form-group">
+    <label for="seasons">Collapse seasons</label><br />
+    <label class="radio-inline">
+      <input type="radio" name="collapse" id="collapse_1" value="subjective" checked> No - separate
+    </label>
+    <label class="radio-inline">
+      <input type="radio" name="collapse" id="collapse_2" value="general"> Yes - on a single line
+    </label>
+  </div>
+  <div class="form-group">
+    <label for="maj_scale">Primary scale</label><br/>
+    <select class="field_selector" id="maj_scale" name="maj_scale">
+      <option selected value="YYYY">Year</option>
+      <option value="MMM">Month</option>
+      <option value="WW">Week</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="min_scale">Secondary scale</label><br/>
+    <select class="field_selector" id="min_scale" name="min_scale">
+      <option selected value="MMM">Month</option>
+      <option value="WW">Week</option>
+      <option value="DD">Day</option>
+      <option value="HH">Hour</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="min_date">Calendar start</label><br/>
+    <input data-provide="datepicker-inline">
+  </div>
+  <div class="form-group">
+    <label for="max_date">Calendar end</label><br/>
+    <input data-provide="datepicker-inline">
+  </div>
+  <p /><hr /><p />
+  <div class="form-group">
+    <label for="start_date">Point of view</label><br />
+    <label class="radio-inline">
+      <input type="radio" name="pov" id="pov_2" value="general"> general
+    </label>
+    <label class="radio-inline">
+      <input type="radio" name="pov" id="pov_1" value="subjective"> subjective
+    </label>
+    <label class="radio-inline">
+      <input type="radio" name="pov" id="pov_3" value="filtered"> filtered
+    </label>
+  </div>
+  <div class="form-group" id="people"></div>
+  <p /><hr /><p />
+  <button type="submit" class="btn btn-default">Submit</button>
+</div>
+<script id="people_select-template" type="text/x-handlebars-template">	
+    <label for="min_scale">POV Owner</label><br/>
+    <select class="field_selector" id="min_scale" name="min_scale">
+      {{#each people}}
+      <option selected value="{{ this }}">{{ this }}</option>
+      {{/each}}
+    </select>
+</script>

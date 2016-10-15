@@ -1,0 +1,23 @@
+% layout 'default';
+%= javascript 'https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.2.0/dropzone.js'
+%= stylesheet 'https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.2.0/dropzone.css'
+%= javascript 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.8.0/xlsx.full.min.js'
+
+<div class="col-md-8 col-md-offset-2">
+  <div>
+    <h2>I am file</h2>
+    <div id="dz"></div>
+  </div>
+</div>
+
+<script>
+   function handleDrop(e) {
+       e.preventDefault();
+       e.stopPropagation();
+       return 1
+   }; 
+   $(function() {
+	$('#dz').addClass('jumbotron').css('background-color', 'lightgrey').css('border', 'none');
+        document.getElementById('dz').addEventListener('drop', handleDrop, false);
+   })
+</script>
