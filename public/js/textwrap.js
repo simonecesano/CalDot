@@ -26,22 +26,30 @@ function wrap(text, width) {
 
 function rect_around(text) {
     text.each(function() {
-	var bbox = this.getBoundingClientRect();
-	var root_el = getRoot(this)
-	var x_off = root_el.getBoundingClientRect().x
-	var y_off = root_el.getBoundingClientRect().y
-
-	d3.select(this)
-	    .append('rect')
-	    .attr("x", bbox.x - x_off)
-	    .attr("y", bbox.y - y_off )
+	// var bbox = this.getBoundingClientRect();
+	var bbox = this.getBBox();
+	var group = d3.select(this);
+	var t = group.attr('transform');
+	var group_node = this;
+	group.append('rect')
+	    .attr("x", bbox.x)
+	    .attr("y", bbox.y)
 	    .attr("width", bbox.width)
 	    .attr("height", bbox.height)
-	    .style('fill-opacity', "0.1")
-	    .style('fill', "grey")
-	    .style("stroke", "#eeeeee" )
+	    .style("stroke", "white")
 	    .style("stroke-width", 2)
+	    .style('fill-opacity', "1")
+	    .style('fill', "#eeeeee")
 
+	// console.log(this.parentNode);
+	group.selectAll('text').each(function(e, i){
+	    var t = this.cloneNode(true); this.remove()
+	    group_node.appendChild(t);
+	});
+	var p = this.parentNode;
+	var g = this.cloneNode(true);
+	console.log(this);
+	this.remove(); p.appendChild(g);
     })
 }
 
@@ -55,29 +63,19 @@ function getRoot(el){
 
 
 function layout_03(nodes) {
-    
-    nodes.each(function(e, i) { e.rect = this.getBoundingClientRect() });
-
-    // sort the nodes left to right
-    var nodes_sorted = nodes.sort(function(a, b){
-	console.log(a);
-	return a.rect.x != b.rect.x ? a.rect.x - b.rect.x : a.rect.y - b.rect.y
-    })
-
     var left_point = 0; var top_point = 0; var right_limit;
     var placed = 0; var placed_idx = {};
     var margin = 6;
     var nodes_array = [];
-    nodes_sorted.each(function(e, i) {
+
+    nodes.each(function(e, i) {
 	delete e.rect;
-	// console.log(this);
-	console.log(this.parentNode);
 	nodes_array.push(this);
 	placed_idx[i] = 0;
     });
 
 
-    console.log('---------------------');
+    
     var b_left = 0; // left boundary
     var b_top = nodes_array[0].getBoundingClientRect().top;
     
@@ -90,7 +88,6 @@ function layout_03(nodes) {
 	// repeat until you have tried to place all nodes
 	while (i < nodes_array.length) {
 	    if (!placed_idx[i] && nodes_array[i].getBoundingClientRect().x > b_left) {
-
 		var t = b_top - nodes_array[i].getBoundingClientRect().top;
 		var d = d3.select(nodes_array[i])
 
@@ -106,7 +103,7 @@ function layout_03(nodes) {
 		placed_idx[i] = 1;
 		
 		placed++;
-		console.log(nodes_array[i].parentNode);
+		// console.log(nodes_array[i].parentNode);
 	    } else {
 	    }
 	    i++
