@@ -34,30 +34,32 @@
 	    calendar_summary.headers = calendar[0];
 	    $('#calendar_data_modal').html(templates.calendar_data(calendar_summary))
 	    $('#calendar_data_modal').modal()
-	});
-	$('#calendar_data_modal').on('hidden.bs.modal', function (e) {
-	    // ---------------------------------------------
-	    // convert the calendar to an array of hashes
-	    // ---------------------------------------------
-	    var mapping = [];
-	    $('.field_selector').each(function(i, e){
-		if ($(e).val()) {
-		    mapping.push([$(e).data('column'), $(e).val()]);
-		}
-	    });
-	    calendar = _.map(calendar, function(e, i){
-		var task = {}; var row = e
-		_.each(mapping, function(e, i){
-		    task[e[1]] = row[e[0]];
+	    $('#modal_save').on('click', function (e) {
+		// ---------------------------------------------
+		// convert the calendar to an array of hashes
+		// ---------------------------------------------
+		var mapping = [];
+		$('.field_selector').each(function(i, e){
+		    if ($(e).val()) {
+			mapping.push([$(e).data('column'), $(e).val()]);
+		    }
 		});
-		return task;
+		calendar = _.map(calendar, function(e, i){
+		    var task = {}; var row = e
+		    _.each(mapping, function(e, i){
+			task[e[1]] = row[e[0]];
+		    });
+		    return task;
+		});
+		var date_format = $('#date_format').val();
+		_.each(calendar, function(e, i){
+		    e.start = moment(e.start, date_format).format();
+		    e.finish = moment(e.finish, date_format).format();
+		});
+		localStorage.setItem('calendar', JSON.stringify(calendar));
+		$('#calendar_data_modal').modal('toggle')
+		window.location = "<%= url_for('/table') %>";
 	    });
-	    var date_format = $('#date_format').val();
-	    _.each(calendar, function(e, i){
-		e.start = moment(e.start, date_format).format();
-		e.finish = moment(e.finish, date_format).format();
-	    });
-	    localStorage.setItem('calendar', JSON.stringify(calendar));
 	});
 	$('#calendar_data_modal').on('shown.bs.modal', function (e) {
 	    $('.field_selector').each(function(i, e){
@@ -108,7 +110,8 @@
 	</ul>
       </div>
       <div class="modal-footer">
-        <button id="fields_modal_close" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+	<button type="button" id="modal_close" class="btn btn-default" data-dismiss="modal">Close</button>
+	<button type="button" id="modal_save"  class="btn btn-primary">Save changes</button>
       </div>
     </div>
   </div>
