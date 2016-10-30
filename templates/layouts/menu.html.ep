@@ -12,7 +12,7 @@
       <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-2">
         <ul class="nav navbar-nav">
           <li>
-            <a href="/load">Load</a>
+            <a href="<%= url_for('/load') %>">Load</a>
 	  </li>
           <li>
             <a class="dropdown-toggle" id="save" data-toggle="dropdown" href="#">Save</a>
@@ -20,8 +20,8 @@
           <li class="dropdown">
             <a class="dropdown-toggle" data-toggle="dropdown" href="#">View <span class="caret"></span></a>
             <ul class="dropdown-menu">
-              <li><a href="/chart">Chart</a></li>
-	      <li><a href="/table">Table</a></li>
+              <li><a href="<%= url_for('/chart') %>">Chart</a></li>
+	      <li><a href="<%= url_for('/table') %>">Table</a></li>
             </ul>
           </li>
       </div>

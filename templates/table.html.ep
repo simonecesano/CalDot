@@ -8,7 +8,6 @@
 	    templates[id] = Handlebars.compile($(this).html());
 	});
 	var data = JSON.parse(localStorage.getItem('calendar'));
-	console.log(data[3]);
 	$('#tasks').html(templates.people_table({
 	    tasks: data,
 	    fields: ["task", "start", "finish", "owner", "participants"]

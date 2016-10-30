@@ -303,7 +303,7 @@
   </div>
   <div class="form-group" id="people"></div>
   <p /><hr /><p />
-  <button type="submit" id="submit" class="btn btn-default">Submit</button>
+  <button type="submit" id="submit" class="btn btn-default">Update</button>
 </div>
 <script id="people_select-template" type="text/x-handlebars-template">	
     <label for="min_scale">POV Owner</label><br/>
