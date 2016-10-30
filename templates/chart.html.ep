@@ -1,9 +1,17 @@
 % layout 'default';
 % title 'Welcome';
+%= javascript '/js/calendar.js'
 %= javascript '/js/textwrap.js'
 <script>
   $(function(){
       var templates = {};
+
+      var collide = function(r1, r2){
+	  return !(r2.left > r1.right || 
+		   r2.right < r1.left || 
+		   r2.top > r1.bottom ||
+		   r2.bottom < r1.top);
+      }
       
       $(("[type='text/x-handlebars-template']" )).each(function(){
 	  var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
@@ -18,12 +26,10 @@
 	  saveAs(blob, "myProfile.svg");
       })
       $('#submit').click(function(){
-	  // console.log($('#pov_owner').val())
-	  // console.log(data.length);
-	  var d = filter_data(data, { owner: $('#pov_owner').val() } );
+	  var d = filter_data(data, {
+	      owner: $('#pov_owner').val()
+	  } );
 	  set_positions(d);
-	  // d3.selectAll('g.task').remove()
-	  // console.log(d.length);
 	  draw_chart(d)
       })
 
@@ -34,55 +40,45 @@
       function filter_data (data, filter) {
 	  if (filter.owner) {
 	      var re = new RegExp (filter.owner, 'i');
-	      return _.filter(data, function(e, i){
+	      data = _.filter(data, function(e, i){
 		  return e.owner && e.owner.match(re)
 	      })
 	  }
+	  if (filter.min_date) {
+	      data = _.filter(data, function(e, i) {
+		  return e.date >= filter.min_date;
+	      })
+	  }
+	  return data;
       }
       
-      var time_chunk = {
-	  'YYYY' : 'year',
-	  'MMM':   'month',
-	  'WW':    'week',
-	  'DD':    'day',
-	  'HH':    'hour',
-      };
       var data = JSON.parse(localStorage.getItem('calendar'));
-      _.each(data, function(e, i){
-	  e.date = e.finish;
-	  e.name = e.task
-      });
-      data = _.filter(data, function(e){
-	  return !(e.date.match(/invalid/i))
-      })
-      data = _.sortBy(data, function(e){ return moment(e.date).unix() });
+      var cal = new Calendar(data);
 
+      data = cal.data();
       function set_positions(data){
 	  _.each(data, function(e, i){
 	      var x = i % 2 ? 50 : 80;
-	      var p = ((i % 4) < 2) ? 1 : -1;
+	      // var p = ((i % 4) < 2) ? 1 : -1;
+	      var p = (i % 2) ? 1 : -1;
 	      var s = ((i % 4) < 2) ? 0 : -40;
-	      e.pos_y  = x * p;
-	      e.text_y = x * p + s;
+	      // e.pos_y  = x * p;
+	      // e.text_y = x * p + s;
+	      e.pos_y  = 50;
+	      e.text_y = 50;
 	  });
       };
 
-      var people = _.flatten(_.map(data, function(e, i){
-	  var p = e.owner.split(/;\s*|,\s*/);
-	  if (e.participants) { p.push(e.participants.split(/;\s*|,\s*/)) }
-	  return _.flatten(p);
-      }));
-      
-      people = _.sortBy(people);
-      $('#people').html(templates.people_select({ people: _.uniq(people) }))
+      $('#people').html(templates.people_select({ people: cal.people() }))
+
       set_positions(data);
       
       function draw_chart (data, options){
-	  
-	  var min_date = _.first(data).date
-	  var max_date = _.last(data).date
-	  
+	  var min_date = cal.min_date;
+	  var max_date = cal.max_date;
 	  var scales = { min: $('#min_scale').val(), maj: $('#maj_scale').val() }
+
+	  var time_chunk = { 'YYYY' : 'year', 'MMM': 'month', 'WW': 'week', 'DD': 'day', 'HH': 'hour' };
 	  
 	  var start_scale = moment(min_date).clone().startOf(time_chunk[scales.min]);
 	  var end_scale = moment(max_date).clone().endOf(time_chunk[scales.min]);
@@ -116,9 +112,11 @@
 	  d3.select("#chart").html('');
 	  var svg = d3.select("#chart").append("svg")
 	      .attr("width", width)
-	      .attr("height", 600)
+	      .attr("height", 800)
 	      .attr('id', 'd3')
 	      .style("background-color", "#eeeeee");
+
+	  var ref_bbox = svg.node().getBoundingClientRect()
 	  
 	  var x_scale = d3.scaleLinear()
 	      .domain([start_scale.unix(), end_scale.unix()])
@@ -138,8 +136,8 @@
 		  .attr("y", chunk_y)
 		  .attr("width", function(d){ return x_scale(d.end.unix()) - x_scale(d.start.unix()) })
 		  .attr("height", chunk_height)
-		  .attr("fill", function(d){ return '#bbbbbb' })
-		  .attr("stroke", function(d){ return "#eeeeee" })
+		  .style("fill", function(d){ return '#bbbbbb' })
+		  .style("stroke", function(d){ return "#eeeeee" })
 		  .attr("class", chunk_class)
 		  .attr("stroke-width", 3)
 	      
@@ -151,7 +149,7 @@
 		  .attr('text-anchor', "middle")
 		  .attr("x", function(d){ return x_scale(d.start.unix()) + (x_scale(d.end.unix()) - x_scale(d.start.unix())) / 2  })
 		  .attr("y", chunk_y + 25)
-		  .attr("style", "color:white")
+		  .style("color", "white")
 		  .attr("class", chunk_class)
 		  .text( function (d) { return d.name })
 	      ;
@@ -160,7 +158,7 @@
 	  
 	  
 	  // timeline
-	  var baseline_y = 250 
+	  var baseline_y = 150 
 	  
 	  svg.append("line")
 	      .attr("x1", 10)
@@ -174,44 +172,76 @@
 	      .data(data)                        
 	      .enter()                           
 	      .append("g")
-	      .attr("class", 'task');
+	      .attr("class", 'task')
+	      .attr("t_id", function(d, i){ return i });
 
-	  // connecting lines 
+	      
+
+	  // lines
 	  task_groups.append("line").attr('class', "line")
 	      .attr("x1", function(d) { return x_scale(moment(d.date).unix()) })
-	      .attr("x2", function(d) { return x_scale(moment(d.date).unix()) })
-	      .attr("y1", function(d, i) { return baseline_y + d.pos_y })
-	      .attr("y2", function(d) { return baseline_y ; })
-	      .attr("stroke-width", 1)
-	      .attr("stroke", 'black')
+	      .attr("x2", function(d, e) { return x_scale(moment(d.date).unix()) })
+	      .attr("y2", function(d) { return baseline_y })
+	      .attr("y1", function(d, i) { return baseline_y + 60 })
+	      .style("stroke-width", 1)
+	      .style("stroke", 'black')
 	  ;
-	  
-	  // task text
-	  task_groups.append("text").attr('text-anchor', "middle").attr('class', "name")
-	      .attr("x", function(d, j) { return x_scale(moment(d.date).unix()) })
-	      .attr("y", function(d, i) { return baseline_y + d.text_y + 10; })
-	      .attr('class', 'task')
-	      .style("background-color", "#eeeeee")
-	      .text( function (d) { return d.name })
-	  ;
-	  // task date
-	  task_groups.append("text").attr('class', "date").attr('text-anchor', "middle")
-	      .attr("x", function(d) { return x_scale(moment(d.date).unix()) })
-	      .attr("y", function(d, i) { return baseline_y + d.text_y + 30; })
-	      .attr('class', 'date')
-	      .style("background-color", "#eeeeee")
-	      .text( function (d) { return moment(d.date).format('D MMM') })
-	  ;
-
 	  // task dots
 	  task_groups.append("circle")
 	      .attr("cx", function(d) { return x_scale(moment(d.date).unix()) })  
 	      .attr("cy", function(d) { return baseline_y })
 	      .attr("r",  function(d) { return dot_radius })
-	      .attr("fill",function(d){ return 'red' })
-	      .attr("stroke-width", 1)
-	      .attr("stroke", 'white')
+	      .style("fill",function(d){ return 'red' })
+	      .style("stroke-width", 1)
+	      .style("stroke", 'white')
 	  ;
+
+	  task_groups.append("g").attr("class", 'caption');
+
+	  // task text
+	  var caption_groups = svg.selectAll("g.caption")
+	  caption_groups.append("text").attr('text-anchor', "middle")
+	      .attr("x", function(d, j) { return x_scale(moment(d.date).unix()) })
+	      .attr("y", function(d, i) {
+		  return 1 || !(i % 2) ? baseline_y + d.text_y + 10
+		      : baseline_y - d.text_y - 30
+	      })
+	      .attr('class', 'task')
+	      .style("font-size", "10px")
+	      .text( function (d) { return d.name })
+	  ;
+
+	  // task date
+	  caption_groups.append("text").attr('class', "date").attr('text-anchor', "middle")
+	      .attr("x", function(d) { return x_scale(moment(d.date).unix()) })
+	      .attr("y", function(d, i) { return 1 || !(i % 2) ? baseline_y + d.text_y + 25
+					  : baseline_y - d.text_y - 10 ; })
+	      .attr('class', 'date')
+	      .style("font-size", "10px")
+	      .text( function (d) { return moment(d.date).format('D MMM') })
+	      .each(function(d, i, e, f){
+	      })
+	  ;
+	  caption_groups.on('click', function(d){
+	      var z = d3.select(this).style('z-index') ? parseInt(d3.select(this).style('z-index')) + 1 : 0;
+	      d3.select(this).style('z-index', z)
+	      console.log(d3.select(this).style('z-index'))
+	  })
+
+	  caption_groups.call(layout_03)
+
+	  d3.selectAll('line.line').each(function(e, i){
+	      var n = d3.select(this.parentNode).select('.caption').node();
+	      var top = n.getBoundingClientRect().top - ref_bbox.top;
+	      d3.select(this).attr('y1', top)
+	      console.log(this);
+	      // var p = this.parentNode;
+	      // var g = this.cloneNode(true);
+	      // this.remove(); p.appendChild(g);
+	  });
+	  caption_groups.call(rect_around)
+	  task_groups.each(function(e, i){ e.rect = this.getBoundingClientRect() });
+	  task_groups.sort(function(a, b){ return b.rect.bottom - a.rect.bottom || b.rect.right - a.rect.right })
       };
       draw_chart(data);
   })
