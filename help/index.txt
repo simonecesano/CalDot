@@ -1,0 +1,31 @@
+# Welcome to CalDot #
+
+## A Quick Introduction ##
+
+The process for visualizing a calendar is simple:
+
+1. first load a calendar by copy-paste in the big text area on the "load" page. Make sure the first row in the calendar includes the field names 
+2. then choose a date format for parsing the dates in the calendar - this is a string with "D" meaning day, "M" for month, and "Y" for year. Like so, for example: "DD-MMM-YY"
+3. then check the data, and make sure that the mapping of fields is correct
+4. if everything is fine, press "Save"
+5. now your calendar appears as a table - give it a once-over to check if everything is correct
+6. and now, if you go to "View &rarr; Chart" you should see the calendar charted correctly
+7. you can save the calendar to Illustrator by clicking on "Save"
+
+## Further things you can do ##
+
+- use the "POV Owner" dropdown to filter out tasks
+
+## Things you can't do ##
+
+CalDot savesand works on one calendar at a time. If you want to mash up calendars, you have to do it outside the app (in Excel, for example). 
+
+## Upcoming features ##
+
+- automatic zooming to the relevant area
+- date filtering
+- collapsing multiple activities happening on the same date
+- multiple calendars on one chart
+- personalized point-of-view
+- highlighting unusable tasks on table view
+- width control on labels

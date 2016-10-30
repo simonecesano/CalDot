@@ -24,6 +24,9 @@
 	      <li><a href="<%= url_for('/table') %>">Table</a></li>
             </ul>
           </li>
+          <li>
+            <a href="<%= url_for('/help') %>">Help</a>
+	  </li>
       </div>
     </div>
   </nav>
